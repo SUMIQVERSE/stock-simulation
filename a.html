@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Trading Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      background-color: #f4f7fa;
+      padding: 30px;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #243e90;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #243e90;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1c3174;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    #suggestions div {
+      padding: 5px;
+      background: #e9f0ff;
+      cursor: pointer;
+    }
+    #suggestions div:hover {
+      background: #c7dbff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="text-align: center; transform: scaleY(2);">WELCOME TO YOUR TRADING DASHBOARD</h1>
+    <h2>Balance: $<span id="balance">Loading...</span></h2>
+
+    <h3>Search Stock</h3>
+    <input type="text" id="symbolInput" placeholder="Enter stock symbol" oninput="showSuggestions()">
+    <button onclick="fetchStock()">Get Price</button>
+    <div id="suggestions"></div>
+
+    <p id="stockPrice">Price will appear here</p>
+
+    <input type="number" id="quantityInput" placeholder="Quantity">
+    <button onclick="fillMaxBuy()">MAX BUY</button>
+    <button onclick="fillMaxSell()">MAX SELL</button>
+    <button onclick="buyStock()">Buy</button>
+    <button onclick="sellStock()">Sell</button>
+
+    <h3>Price Chart</h3>
+    <canvas id="stockChart" width="400" height="200"></canvas>
+
+    <h3>Your Portfolio</h3>
+    <div id="portfolioTable"></div>
+
+    <h3>Transaction History</h3>
+    <div id="historyTable"></div>
+  </div>
+
+  <script>
+    const user = localStorage.getItem("loggedInUser");
+    if (!user) window.location.href = "login.html";
+
+    const balanceKey = user + "_balance";
+    const portfolioKey = user + "_portfolio";
+    const historyKey = user + "_history";
+
+    if (!localStorage.getItem(balanceKey)) {
+      localStorage.setItem(balanceKey, "100000");
+      localStorage.setItem(portfolioKey, JSON.stringify({}));
+      localStorage.setItem(historyKey, JSON.stringify([]));
+    }
+
+    document.getElementById("balance").innerText = localStorage.getItem(balanceKey);
+
+    const stockSymbols = [
+      "AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "NFLX", "INTC", "AMD",
+      "NSE:TCS", "NSE:INFY", "NSE:HDFCBANK", "NSE:RELIANCE", "NSE:WIPRO", "NSE:ICICIBANK", "NSE:SBIN", "NSE:HCLTECH"
+    ];
+
+    let currentPrice = 0;
+    let currentSymbol = "";
+    let chartInstance = null;
+
+    function showSuggestions() {
+      const input = document.getElementById("symbolInput").value.toUpperCase();
+      const suggestionsDiv = document.getElementById("suggestions");
+      suggestionsDiv.innerHTML = "";
+      if (input.length === 0) return;
+
+      const filtered = stockSymbols.filter(symbol => symbol.includes(input));
+      filtered.forEach(symbol => {
+        const div = document.createElement("div");
+        div.innerText = symbol;
+        div.onclick = () => {
+          document.getElementById("symbolInput").value = symbol;
+          suggestionsDiv.innerHTML = "";
+        };
+        suggestionsDiv.appendChild(div);
+      });
+    }
+
+    async function fetchStock() {
+      const symbol = document.getElementById("symbolInput").value.trim().toUpperCase();
+      if (!symbol) return alert("Enter stock symbol");
+      const apiKey = 'bc0dd95f7c854758977b9cb1d235f976';
+
+      try {
+        const priceRes = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${apiKey}`);
+        const priceData = await priceRes.json();
+        if (!priceData.price) return alert("Invalid symbol or API error.");
+
+        currentPrice = parseFloat(priceData.price);
+        currentSymbol = symbol;
+        document.getElementById("stockPrice").innerText = `${symbol} Price: $${currentPrice}`;
+
+        const chartRes = await fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}&interval=5min&outputsize=30&apikey=${apiKey}`);
+        const chartData = await chartRes.json();
+        if (!chartData.values) return;
+
+        const labels = chartData.values.map(p => p.datetime).reverse();
+        const prices = chartData.values.map(p => p.close).reverse();
+
+        if (chartInstance) chartInstance.destroy();
+
+        const ctx = document.getElementById('stockChart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: `${symbol} Price`,
+              data: prices,
+              borderColor: '#243e90',
+              fill: false,
+              tension: 0.2
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: { ticks: { maxRotation: 45, minRotation: 45 } },
+              y: { beginAtZero: false }
+            }
+          }
+        });
+      } catch (error) {
+        document.getElementById("stockPrice").innerText = "Fetch error.";
+        console.error(error);
+      }
+    }
+
+    function fillMaxBuy() {
+      if (currentPrice <= 0) return alert("Load stock price first.");
+      const balance = parseFloat(localStorage.getItem(balanceKey));
+      const maxQty = Math.floor(balance / currentPrice);
+      document.getElementById("quantityInput").value = maxQty;
+    }
+
+    function fillMaxSell() {
+      const portfolio = JSON.parse(localStorage.getItem(portfolioKey));
+      const qty = portfolio[currentSymbol] || 0;
+      document.getElementById("quantityInput").value = qty;
+    }
+
+    function buyStock() {
+      const qty = parseInt(document.getElementById("quantityInput").value);
+      if (!qty || qty <= 0) return alert("Enter valid quantity.");
+
+      const balance = parseFloat(localStorage.getItem(balanceKey));
+      const totalCost = qty * currentPrice;
+      if (totalCost > balance) return alert("Insufficient balance.");
+
+      localStorage.setItem(balanceKey, (balance - totalCost).toFixed(2));
+      document.getElementById("balance").innerText = localStorage.getItem(balanceKey);
+
+      let portfolio = JSON.parse(localStorage.getItem(portfolioKey));
+      if (!portfolio[currentSymbol]) portfolio[currentSymbol] = 0;
+      portfolio[currentSymbol] += qty;
+      localStorage.setItem(portfolioKey, JSON.stringify(portfolio));
+
+      let history = JSON.parse(localStorage.getItem(historyKey));
+      history.push({ type: "BUY", symbol: currentSymbol, qty, price: currentPrice, time: new Date().toLocaleString() });
+      localStorage.setItem(historyKey, JSON.stringify(history));
+
+      alert(`Bought ${qty} shares of ${currentSymbol}`);
+      renderPortfolio();
+      renderHistory();
+    }
+
+    function sellStock() {
+      const qty = parseInt(document.getElementById("quantityInput").value);
+      if (!qty || qty <= 0) return alert("Enter valid quantity.");
+
+      let portfolio = JSON.parse(localStorage.getItem(portfolioKey));
+      if (!portfolio[currentSymbol] || portfolio[currentSymbol] < qty) return alert("Not enough shares.");
+
+      const gain = qty * currentPrice;
+      let balance = parseFloat(localStorage.getItem(balanceKey));
+      balance += gain;
+      localStorage.setItem(balanceKey, balance.toFixed(2));
+      document.getElementById("balance").innerText = balance.toFixed(2);
+
+      portfolio[currentSymbol] -= qty;
+      if (portfolio[currentSymbol] === 0) delete portfolio[currentSymbol];
+      localStorage.setItem(portfolioKey, JSON.stringify(portfolio));
+
+      let history = JSON.parse(localStorage.getItem(historyKey));
+      history.push({ type: "SELL", symbol: currentSymbol, qty, price: currentPrice, time: new Date().toLocaleString() });
+      localStorage.setItem(historyKey, JSON.stringify(history));
+
+      alert(`Sold ${qty} shares of ${currentSymbol}`);
+      renderPortfolio();
+      renderHistory();
+    }
+
+    function renderPortfolio() {
+      const portfolio = JSON.parse(localStorage.getItem(portfolioKey));
+      const tableDiv = document.getElementById("portfolioTable");
+      if (!portfolio || Object.keys(portfolio).length === 0) {
+        tableDiv.innerHTML = "<p>No stocks in portfolio.</p>";
+        return;
+      }
+
+      let html = "<table><tr><th>Stock</th><th>Quantity</th></tr>";
+      for (let symbol in portfolio) {
+        html += `<tr><td>${symbol}</td><td>${portfolio[symbol]}</td></tr>`;
+      }
+      html += "</table>";
+      tableDiv.innerHTML = html;
+    }
+
+    function renderHistory() {
+      const history = JSON.parse(localStorage.getItem(historyKey));
+      const tableDiv = document.getElementById("historyTable");
+      if (!history || history.length === 0) {
+        tableDiv.innerHTML = "<p>No transactions yet.</p>";
+        return;
+      }
+
+      let html = "<table><tr><th>Type</th><th>Stock</th><th>Qty</th><th>Price</th><th>Time</th></tr>";
+      history.slice().reverse().forEach(tx => {
+        html += `<tr><td>${tx.type}</td><td>${tx.symbol}</td><td>${tx.qty}</td><td>$${tx.price}</td><td>${tx.time}</td></tr>`;
+      });
+      html += "</table>";
+      tableDiv.innerHTML = html;
+    }
+
+    renderPortfolio();
+    renderHistory();
+  </script>
+</body>
+</html>

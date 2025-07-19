@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        .left, .right {
+            width: 50%;
+            padding: 40px;
+        }
+
+        .divider {
+            width: 1px;
+            background-color: #ccc;
+            margin: 0 10px;
+        }
+
+        .left {
+            background-color: #ffc34b2f;
+        }
+
+        .right {
+            background-color: #1a73e80b;
+        }
+
+        .left h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .left ul {
+            list-style: disc;
+            margin-left: 20px;
+            font-size: 18px;
+        }
+
+        .right {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .form-box {
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .right h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .info-box {
+            background-color: #e8f0fe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 10px;
+            border-left: 5px solid #1a73e8;
+            font-family: Arial, sans-serif;
+            color: #202124;
+        }
+
+        .info-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .info-icon {
+            font-size: 18px;
+            color: #1a73e8;
+            margin-right: 8px;
+        }
+
+        .info-box ul {
+            margin-left: 24px;
+            font-size: 15px;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+            background-color: #243e90;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+            color: green;
+        }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #555;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            width: 80px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .or-divider::before {
+            margin-right: 12px;
+        }
+
+        .or-divider::after {
+            margin-left: 12px;
+        }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <h1 style="font-size: 28px">
+                MARKETKRAFT<span style="color: #243e90">Simulator</span>
+            </h1><br><br><br>
+            <h1 style="font-size: 36px; color: #243e90;"><strong>Unlock the Power of Investing</strong></h1><br>
+            <ul>
+                <li>Practice trading stocks, with virtual money</li><br>
+                <li>Track your portfolio like a pro</li><br>
+                <li>Gain confidence before risking your own money</li><br>
+                <li>Learn how the markets work in a safe space with no risk</li>
+            </ul>
+
+            <img src="sign up.png" alt="sign up image" style="width: 60%; height: auto;">
+
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="right">
+            <div class="form-box">
+                <h1 style="font-size: 25px;">Sign In to Simulator</h1>
+                <form onsubmit="loginUser(event)">
+                    <label>Email:</label><br>
+                    <input type="email" id="email" required placeholder="Enter your Email Address"><br><br>
+
+                    <label>Password:</label><br>
+                    <input type="password" id="password" required placeholder="Enter your Password"><br><br>
+
+                    <div style="display: flex; justify-content: center; margin-top: 40px;">
+                        <button type="submit" style="border-radius: 50px; background-color:#E2FF00; color: black; padding: 18px 70px ;"><strong>CONTINUE</strong></button>
+                    </div>
+
+                    <div class="or-divider" style="display: flex; justify-content: center;">or</div>
+
+                    <a href="register.html" style="text-decoration: none; color: #243e90; cursor: pointer; display: flex; justify-content: center;">
+                        Register Now
+                    </a>
+                </form>
+                <p id="message"></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function loginUser(event) {
+            event.preventDefault();
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+
+            const storedPassword = localStorage.getItem(email);
+
+            if (!storedPassword) {
+                document.getElementById("message").innerText = "User not found. Please register first.";
+                return;
+            }
+
+            if (storedPassword !== password) {
+            document.getElementById("message").innerText = "Incorrect password.";
+            return;
+            }
+
+            // Login successful
+            localStorage.setItem("loggedInUser", email);
+
+              // Initialize balance, portfolio, and history if not set
+            if (!localStorage.getItem(email + "_balance")) {
+                localStorage.setItem(email + "_balance", "100000"); // $100,000 starting balance
+                localStorage.setItem(email + "_portfolio", JSON.stringify({}));
+                localStorage.setItem(email + "_history", JSON.stringify([]));
+            }
+
+            // Redirect to trading page
+            window.location.href = "a.html";
+        }
+    </script>
+</body>
+</html>
